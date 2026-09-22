@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 # ---------------------------------------------------------
 # 1. LÉPÉS: ALAPBEÁLLÍTÁSOK
@@ -73,14 +72,14 @@ def process_ameco_data(file_path, value_name, title_keyword, unit_keyword):
 print("Adatok beolvasása folyamatban...")
 
 df_gdp = process_world_bank_data('../gdp/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_133326.csv', 'GDP_USD')
-df_inflation = process_world_bank_data('../inflacio/API_FP.CPI.TOTL.ZG_DS2_en_csv_v2_175523.csv', 'Inflation_Rate')
+df_inflation = process_world_bank_data('../inflation/API_FP.CPI.TOTL.ZG_DS2_en_csv_v2_175523.csv', 'Inflation_Rate')
 
 # Megadjuk a kulcsszavakat, amik alapján kiszűrjük a sok felesleges sort az AMECO fájlokból
-df_debt = process_ameco_data('../allamadossag/AMECO18.csv', 'Public_Debt_Pct',
+df_debt = process_ameco_data('../gov_debt/AMECO18.csv', 'Public_Debt_Pct',
                              title_keyword='gross debt',
                              unit_keyword='Percentage of GDP')
 
-df_deficit = process_ameco_data('../allamhaztartas/AMECO16.csv', 'Budget_Deficit_Pct',
+df_deficit = process_ameco_data('../gov_deficit/AMECO16.csv', 'Budget_Deficit_Pct',
                                 title_keyword='Net lending',
                                 unit_keyword='Percentage of GDP')
 
@@ -100,5 +99,5 @@ master_df.sort_values(by=['Country', 'Year'], inplace=True)
 print("\nAz összevont adatbázis első 10 sora:")
 print(master_df.head(10))
 
-master_df.to_csv('master_adatbazis_kesz.csv', index=False)
+master_df.to_csv('../data/merged_data.csv', index=False)
 print("\nSikeres mentés: master_adatbazis_kesz.csv")
