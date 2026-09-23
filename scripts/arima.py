@@ -7,11 +7,15 @@ from statsmodels.tsa.arima.model import ARIMA
 warnings.filterwarnings("ignore")
 
 # ---------------------------------------------------------
-# GLOBÁLIS BEÁLLÍTÁSOK (Előrejelzés időtávja)
+# GLOBÁLIS BEÁLLÍTÁSOK (Szcenáriók definiálása)
 # ---------------------------------------------------------
-# Ezeket a változókat átírva automatikusan változik a tanítás és az előrejelzés hossza
-FORECAST_START_YEAR = 2019
-FORECAST_END_YEAR = 2025
+# Formátum: 'Szcenárió neve': (Kezdő év, Utolsó előrejelzett év)
+SCENARIOS = {
+    '1991_Szovjetunio_Felbomlasa': (1991, 1996),
+    '2008_Gazdasagi_Valsag': (2008, 2013),
+    '2020_Covid19': (2020, 2025),
+    '2022_Ukr_Konfliktus': (2022, 2027)
+}
 
 # ---------------------------------------------------------
 # 1. ADATOK BEOLVASÁSA ÉS BEÁLLÍTÁSOK
@@ -23,65 +27,64 @@ df = pd.read_csv('../data/merged_data.csv')
 indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct', 'Budget_Deficit_Pct']
 countries = df['Country'].unique()
 
-# Az előrejelzés időtávja a globális változók alapján (a +1 kell, hogy az utolsó év is benne legyen)
-forecast_years = list(range(FORECAST_START_YEAR, FORECAST_END_YEAR + 1))
-steps = len(forecast_years)
-
 # Eredmények gyűjtésére szolgáló lista
 all_forecasts = []
 
-print(f"\nARIMA modellek illesztése és előrejelzés folyamatban ({FORECAST_START_YEAR}-{FORECAST_END_YEAR})...")
-
 # ---------------------------------------------------------
-# 2. ARIMA MODELLEZÉS ORSZÁGONKÉNT ÉS MUTATÓNKÉNT
+# 2. ARIMA MODELLEZÉS SZCENÁRIÓNKÉNT, ORSZÁGONKÉNT, MUTATÓNKÉNT
 # ---------------------------------------------------------
-for country in countries:
-    print(f"Feldolgozás: {country}...")
+for scenario_name, (start_year, end_year) in SCENARIOS.items():
+    print(f"\n--- Szcenárió futtatása: {scenario_name} ({start_year}-{end_year}) ---")
 
-    # Kiszűrjük az adott ország adatait és időrendbe rakjuk
-    country_data = df[df['Country'] == country].sort_values('Year')
+    forecast_years = list(range(start_year, end_year + 1))
+    steps = len(forecast_years)
 
-    # Létrehozunk egy üres DataFrame-et az előrejelzéseknek
-    pred_df = pd.DataFrame({
-        'Country': [country] * steps,
-        'Year': forecast_years
-    })
+    for country in countries:
+        # Kiszűrjük az adott ország adatait és időrendbe rakjuk
+        country_data = df[df['Country'] == country].sort_values('Year')
 
-    for ind in indicators:
-        # A TANULÓ ADATHALMAZ: a globális kezdőév előtti adatok, kihagyva a hiányzó értékeket (NaN)
-        train_data = country_data[country_data['Year'] < FORECAST_START_YEAR][ind].dropna().values
+        # Létrehozunk egy üres DataFrame-et az előrejelzéseknek (új 'Scenario' oszloppal)
+        pred_df = pd.DataFrame({
+            'Scenario': [scenario_name] * steps,
+            'Country': [country] * steps,
+            'Year': forecast_years
+        })
 
-        # Ha túl kevés a történelmi adat (pl. < 10 év), az ARIMA nem tud jól tanulni
-        if len(train_data) < 10:
-            pred_df[ind] = np.nan
-            continue
+        for ind in indicators:
+            # A TANULÓ ADATHALMAZ: a töréspont előtti adatok
+            train_data = country_data[country_data['Year'] < start_year][ind].dropna().values
 
-        try:
-            # ARIMA modell inicializálása és illesztése
-            model = ARIMA(train_data, order=(1, 1, 1))
-            model_fit = model.fit()
+            # Ha túl kevés a történelmi adat (pl. < 10 év), az ARIMA nem tud jól tanulni.
+            # Ez például Észtország 1991-es adatainál fog aktiválódni, ahol nincsenek 1980 előtti szovjet adatok.
+            if len(train_data) < 10:
+                pred_df[ind] = np.nan
+                continue
 
-            # Előrejelzés a beállított lépésszámra
-            forecast = model_fit.forecast(steps=steps)
-            pred_df[ind] = forecast
+            try:
+                # ARIMA modell inicializálása és illesztése
+                model = ARIMA(train_data, order=(1, 1, 1))
+                model_fit = model.fit()
 
-        except Exception as e:
-            # Ha a modell valamiért összedől (nagyon ritka), hagyjuk üresen
-            print(f"  Hiba történt {ind} esetén: {e}")
-            pred_df[ind] = np.nan
+                # Előrejelzés a beállított lépésszámra
+                forecast = model_fit.forecast(steps=steps)
+                pred_df[ind] = forecast
 
-    # Hozzáadjuk az ország előrejelzéseit a nagy listához
-    all_forecasts.append(pred_df)
+            except Exception as e:
+                # Ha a modell összedől, hagyjuk üresen
+                pred_df[ind] = np.nan
+
+        # Hozzáadjuk a kiszámolt periódust a nagy listához
+        all_forecasts.append(pred_df)
 
 # ---------------------------------------------------------
 # 3. EREDMÉNYEK ÖSSZEFŰZÉSE ÉS MENTÉSE
 # ---------------------------------------------------------
-# Az összes ország adatát egyetlen nagy táblázattá fűzzük össze
+# Az összes ország és szcenárió adatát egyetlen nagy táblázattá fűzzük össze
 final_arima_df = pd.concat(all_forecasts, ignore_index=True)
 
-# Mentés
-final_arima_df.to_csv('../data/arima.csv', index=False)
+# Mentés új néven, hogy jelezzük a struktúraváltást
+output_file = '../data/arima_scenarios.csv'
+final_arima_df.to_csv(output_file, index=False)
 
-print("\n✅ Kész! Az előrejelzések sikeresen elmentve: ../data/arima.csv")
-print("\nAz arima.csv első néhány sora:")
-print(final_arima_df.head(10))
+print(f"\n✅ Kész! Az előrejelzések sikeresen elmentve: {output_file}")
+print(f"Összesen {len(final_arima_df)} sor generálva.")
