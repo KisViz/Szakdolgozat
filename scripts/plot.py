@@ -11,7 +11,8 @@ os.makedirs(output_dir, exist_ok=True)
 
 print("Adatok beolvasása...")
 df = pd.read_csv('../data/merged_data.csv')
-df_arima = pd.read_csv('../data/arima_scenarios.csv')
+# df_arima = pd.read_csv('../data/arima_scenarios.csv')
+df_arima = pd.read_csv('../data/var_scenarios.csv')
 
 sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
 
