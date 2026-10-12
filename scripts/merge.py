@@ -18,13 +18,8 @@ master_df = pd.DataFrame(index=index_cols).reset_index()
 
 def process_world_bank_data(file_path, value_name):
     df = pd.read_csv(file_path, skiprows=4)
-
-    # ÚJ: A Világbank EUU kódját átnevezzük EU27-re, hogy passzoljon a listánkhoz!
     df['Country Code'] = df['Country Code'].replace({'EUU': 'EU27'})
-
-    # Szűrés országokra
     df = df[df['Country Code'].isin(countries)]
-
     years_cols = [str(y) for y in range(start_year, end_year + 1) if str(y) in df.columns]
 
     df_long = df.melt(id_vars=['Country Code'],
@@ -34,19 +29,14 @@ def process_world_bank_data(file_path, value_name):
 
     df_long['Year'] = df_long['Year'].astype(int)
     df_long.rename(columns={'Country Code': 'Country'}, inplace=True)
-
     return df_long[['Country', 'Year', value_name]]
 
 
-# ÚJ: Kiegészítettük a függvényt két paraméterrel, amikkel a pontos sorra szűrünk
 def process_ameco_data(file_path, value_name, title_keyword, unit_keyword):
     df = pd.read_csv(file_path, sep=';', encoding='latin1')
-
     df['Country'] = df['CODE'].str.split('.').str[0]
     df = df[df['Country'].isin(countries)]
 
-    # ÚJ: SZIGORÚ SZŰRÉS A CÍMRE ÉS A MÉRTÉKEGYSÉGRE
-    # Ez biztosítja, hogy a 181 sorból csak az az 1 maradjon, ami valóban a GDP arányos adat
     df = df[df['TITLE'].str.contains(title_keyword, case=False, na=False)]
     df = df[df['UNIT'].str.contains(unit_keyword, case=False, na=False)]
 
@@ -59,22 +49,41 @@ def process_ameco_data(file_path, value_name, title_keyword, unit_keyword):
 
     df_long['Year'] = df_long['Year'].astype(int)
     df_long[value_name] = pd.to_numeric(df_long[value_name], errors='coerce')
-
-    # Ha esetleg így is maradna duplikáció (nem fog), ez a sor levédi a hibát
     df_long = df_long.drop_duplicates(subset=['Country', 'Year'])
-
     return df_long[['Country', 'Year', value_name]]
 
 
+# ÚJ FÜGGVÉNY: Olajárak feldolgozása (havi -> éves átlag)
+def process_oil_data(file_path, value_name):
+    # sep=';' és decimal=',' a formátum miatt
+    df = pd.read_csv(file_path, sep=';', decimal=',')
+
+    # A dátum oszlopot igazi dátummá alakítjuk
+    df['Date'] = pd.to_datetime(df['Date'])
+
+    # Kinyerjük az évet egy új oszlopba
+    df['Year'] = df['Date'].dt.year
+
+    # Évenként csoportosítunk, és átlagot vonunk az értékekből
+    df_yearly = df.groupby('Year')['Value'].mean().reset_index()
+
+    # Oszlop átnevezése
+    df_yearly.rename(columns={'Value': value_name}, inplace=True)
+
+    # Csak azokat az éveket tartjuk meg, amik a vizsgált időszakba esnek
+    df_yearly = df_yearly[(df_yearly['Year'] >= start_year) & (df_yearly['Year'] <= end_year)]
+
+    return df_yearly[['Year', value_name]]
+
+
 # ---------------------------------------------------------
-# 3. LÉPÉS: A FÁJLOK BEOLVASÁSA (ÚJ PARAMÉTEREKKEL)
+# 3. LÉPÉS: A FÁJLOK BEOLVASÁSA
 # ---------------------------------------------------------
 print("Adatok beolvasása folyamatban...")
 
 df_gdp = process_world_bank_data('../gdp/API_NY.GDP.MKTP.CD_DS2_en_csv_v2_133326.csv', 'GDP_USD')
 df_inflation = process_world_bank_data('../inflation/API_FP.CPI.TOTL.ZG_DS2_en_csv_v2_175523.csv', 'Inflation_Rate')
 
-# Megadjuk a kulcsszavakat, amik alapján kiszűrjük a sok felesleges sort az AMECO fájlokból
 df_debt = process_ameco_data('../gov_debt/AMECO18.csv', 'Public_Debt_Pct',
                              title_keyword='gross debt',
                              unit_keyword='Percentage of GDP')
@@ -83,6 +92,9 @@ df_deficit = process_ameco_data('../gov_deficit/AMECO16.csv', 'Budget_Deficit_Pc
                                 title_keyword='Net lending',
                                 unit_keyword='Percentage of GDP')
 
+# ÚJ: Olajár beolvasása (a fájl elérési útját módosítsd, ha máshova mentetted!)
+df_oil = process_oil_data('../olaj/oil_prices.csv', 'Oil_Price_USD')
+
 # ---------------------------------------------------------
 # 4. LÉPÉS: ÖSSZEFŰZÉS
 # ---------------------------------------------------------
@@ -90,6 +102,9 @@ master_df = pd.merge(master_df, df_gdp, on=['Country', 'Year'], how='left')
 master_df = pd.merge(master_df, df_inflation, on=['Country', 'Year'], how='left')
 master_df = pd.merge(master_df, df_debt, on=['Country', 'Year'], how='left')
 master_df = pd.merge(master_df, df_deficit, on=['Country', 'Year'], how='left')
+
+# ÚJ: Olajár összefűzése. Itt CSAK a 'Year' az összekötő kulcs, nincs 'Country'!
+master_df = pd.merge(master_df, df_oil, on='Year', how='left')
 
 master_df.sort_values(by=['Country', 'Year'], inplace=True)
 
@@ -100,4 +115,4 @@ print("\nAz összevont adatbázis első 10 sora:")
 print(master_df.head(10))
 
 master_df.to_csv('../data/merged_data.csv', index=False)
-print("\nSikeres mentés: master_adatbazis_kesz.csv")
+print("\nSikeres mentés: merged_data.csv")

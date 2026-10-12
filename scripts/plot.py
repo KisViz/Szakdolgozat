@@ -13,6 +13,7 @@ print("Adatok beolvasása...")
 df = pd.read_csv('../data/merged_data.csv')
 # df_arima = pd.read_csv('../data/arima_scenarios.csv')
 df_arima = pd.read_csv('../data/var_scenarios.csv')
+df_arima = pd.read_csv('../data/arimax_scenarios.csv')
 
 sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
 
@@ -75,7 +76,8 @@ print(f"\nWhat-if ábrák generálása {len(model_orders)} különböző paramé
 
 for order in model_orders:
     # Létrehozzuk a paraméter saját mappáját (pl. ../pictures/ARIMA_1_1_1)
-    order_dir = f'{output_dir}/ARIMA_{order}'
+    # order_dir = f'{output_dir}/ARIMA_{order}'
+    order_dir = f'{output_dir}/ARIMAX_{order}'
     os.makedirs(order_dir, exist_ok=True)
 
     print(f"\n>>> Generálás a mappába: {order_dir}")
@@ -89,7 +91,8 @@ for order in model_orders:
 
             # Formázott ARIMA név a címbe (pl. 1_1_1 -> 1,1,1)
             formatted_order = order.replace('_', ',')
-            fig.suptitle(f'{vizsgalt_orszag}: Tényadatok vs. ARIMA({formatted_order}) [{scenario.replace("_", " ")}]',
+            # fig.suptitle(f'{vizsgalt_orszag}: Tényadatok vs. ARIMA({formatted_order}) [{scenario.replace("_", " ")}]',
+            fig.suptitle(f'{vizsgalt_orszag}: Tényadatok vs. ARIMAX({formatted_order}) [{scenario.replace("_", " ")}]',
                          fontsize=16, weight='bold', y=0.98)
 
             # Szűrés országra ÉS a konkrét ARIMA paraméterre!
@@ -108,7 +111,8 @@ for order in model_orders:
             for col_name, title, ax in mutatok:
                 sns.lineplot(data=df_aktualis, x='Year', y=col_name, ax=ax, label='Tényadatok', color='#1f77b4',
                              linewidth=2.5)
-                sns.lineplot(data=df_predikcio, x='Year', y=col_name, ax=ax, label=f'ARIMA({formatted_order}) trend',
+                # sns.lineplot(data=df_predikcio, x='Year', y=col_name, ax=ax, label=f'ARIMA({formatted_order}) trend',
+                sns.lineplot(data=df_predikcio, x='Year', y=col_name, ax=ax, label=f'ARIMAX({formatted_order}) trend',
                              color='#ff7f0e', linestyle='--', linewidth=2.5)
 
                 ax.set_title(title, fontsize=12)
