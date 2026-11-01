@@ -23,7 +23,7 @@ countries_to_plot = df_actual['Country'].unique()
 indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct', 'Budget_Deficit_Pct']
 
 # ---------------------------------------------------------
-# (1-4. ÁBRA): TÖRTÉNELMI ADATOK
+# (1-6. ÁBRA): TÖRTÉNELMI ADATOK
 # ---------------------------------------------------------
 print("Alap diagramok generálása...")
 
@@ -70,6 +70,61 @@ plt.savefig(f'{output_dir}/adossag_vs_egyenleg_{vizsgalt_ev}.png', dpi=300)
 plt.close()
 
 # ---------------------------------------------------------
+# ÚJ ÁBRA 1: MAGYAR - NÉMET GDP ZUHANÁS (2018-2021)
+# ---------------------------------------------------------
+print("Magyar GDP (2018-2021) ábra generálása...")
+plt.figure(figsize=(10, 6))
+df_gdp_covid = df_actual[(df_actual['Country'].isin(['HUN'])) &
+                         (df_actual['Year'] >= 2018) & (df_actual['Year'] <= 2021)]
+
+# Logaritmikus skála használata a nagyságrendi különbségek (HUN vs DEU) miatt
+sns.lineplot(data=df_gdp_covid, x='Year', y='GDP_USD', hue='Country',
+             linewidth=3, marker='o', markersize=8)
+plt.title('A „Hirtelen leállás”: GDP alakulása (2018 - 2021)', fontsize=14, pad=15)
+plt.ylabel('GDP (USD - Logaritmikus skála)')
+plt.xlabel('Év')
+plt.yscale('log')
+plt.xticks([2018, 2019, 2020, 2021])
+plt.tight_layout()
+plt.savefig(f'{output_dir}/gdp_covid_hun_deu_2018_2021.png', dpi=300)
+plt.close()
+
+# ---------------------------------------------------------
+# ÚJ ÁBRA 2: DUPLA TENGELYES STAGFLÁCIÓ (2021-2023)
+# ---------------------------------------------------------
+print("Stagfláció dupla tengelyes ábra generálása...")
+df_stag = df_actual[(df_actual['Country'] == 'HUN') &
+                    (df_actual['Year'] >= 2021) & (df_actual['Year'] <= 2023)]
+
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+color_inf = '#d62728' # Piros az inflációnak
+ax1.set_xlabel('Év', fontsize=12)
+ax1.set_ylabel('Inflációs ráta (%)', color=color_inf, fontsize=12, weight='bold')
+line1 = ax1.plot(df_stag['Year'], df_stag['Inflation_Rate'], color=color_inf,
+                 linewidth=3, marker='o', markersize=8, label='Infláció (%)')
+ax1.tick_params(axis='y', labelcolor=color_inf)
+ax1.set_xticks([2021, 2022, 2023])
+
+# Második Y-tengely létrehozása a GDP-nek
+ax2 = ax1.twinx()
+color_gdp = '#1f77b4' # Kék a GDP-nek
+ax2.set_ylabel('Nominális GDP (USD)', color=color_gdp, fontsize=12, weight='bold')
+line2 = ax2.plot(df_stag['Year'], df_stag['GDP_USD'], color=color_gdp,
+                 linewidth=3, marker='s', markersize=8, label='GDP (USD)')
+ax2.tick_params(axis='y', labelcolor=color_gdp)
+
+# Közös jelmagyarázat (Legend) összeállítása
+lines = line1 + line2
+labels = [l.get_label() for l in lines]
+ax1.legend(lines, labels, loc='upper left')
+
+plt.title('Stagflációs nyomás Magyarországon (2021 - 2023)', fontsize=14, pad=15)
+fig.tight_layout()
+plt.savefig(f'{output_dir}/stagflacio_dual_axis_hun_2021_2023.png', dpi=300)
+plt.close()
+
+# ---------------------------------------------------------
 # Y-TENGELY SKÁLÁK EGYSÉGESÍTÉSE (Közös Min/Max keresése)
 # ---------------------------------------------------------
 print("Y-tengely skálák egységesítése országonként és mutatónként...")
@@ -79,21 +134,17 @@ df_all_models = pd.concat([df_arima, df_arimax, df_var])
 for c in countries_to_plot:
     y_limits[c] = {}
     for ind in indicators:
-        # Tényadatok minimuma és maximuma 2010-től
         act_min = df_actual[(df_actual['Country'] == c) & (df_actual['Year'] >= 2010)][ind].min()
         act_max = df_actual[(df_actual['Country'] == c) & (df_actual['Year'] >= 2010)][ind].max()
 
-        # Modellek (ARIMA, ARIMAX, VAR) minimuma és maximuma
         pred_min = df_all_models[df_all_models['Country'] == c][ind].min()
         pred_max = df_all_models[df_all_models['Country'] == c][ind].max()
 
         overall_min = min(act_min, pred_min) if pd.notna(act_min) and pd.notna(pred_min) else act_min
         overall_max = max(act_max, pred_max) if pd.notna(act_max) and pd.notna(pred_max) else act_max
 
-        # 10% margó hozzáadása a grafikon széléhez
         padding = (overall_max - overall_min) * 0.1 if pd.notna(overall_max) else 0
         y_limits[c][ind] = (overall_min - padding, overall_max + padding)
-
 
 # ---------------------------------------------------------
 # 5. ÁBRA: UNIVERZÁLIS FÜGGVÉNY A WHAT-IF MODELLEKHEZ
@@ -124,7 +175,6 @@ def generate_model_plots(df_model, model_base_name, extra_title=""):
                                    (df_model['Scenario'] == scenario) &
                                    (df_model['Model_Order'] == order)]
 
-                # Most már nincsenek axes rácsok, csak a nevek
                 mutatok = [
                     ('GDP_USD', 'GDP (USD)'),
                     ('Inflation_Rate', 'Infláció (%)'),
@@ -132,12 +182,10 @@ def generate_model_plots(df_model, model_base_name, extra_title=""):
                     ('Budget_Deficit_Pct', 'Költségvetési egyenleg (GDP %)')
                 ]
 
-                # Minden mutatónál külön képet generálunk
                 for col_name, title in mutatok:
                     plt.figure(figsize=(10, 6))
-                    ax = plt.gca()  # Lekérjük az aktuális tengelyt
+                    ax = plt.gca()
 
-                    # Dinamikus cím minden egyes képhez
                     plt.title(
                         f'{vizsgalt_orszag}: Tényadatok vs. {model_base_name}({formatted_order}) {extra_title}[{scenario.replace("_", " ")}]\n{title}',
                         fontsize=14, weight='bold', pad=15)
@@ -150,7 +198,6 @@ def generate_model_plots(df_model, model_base_name, extra_title=""):
                     ax.set_xlabel('Év')
                     ax.set_ylabel('')
 
-                    # EGYSÉGES SKÁLA BEÁLLÍTÁSA
                     if pd.notna(y_limits[vizsgalt_orszag][col_name][0]):
                         ax.set_ylim(y_limits[vizsgalt_orszag][col_name])
 
@@ -158,11 +205,8 @@ def generate_model_plots(df_model, model_base_name, extra_title=""):
                     ax.legend(loc='best')
 
                     plt.tight_layout()
-
-                    # Fájlnév: what_if_HUN_2020_Covid19_GDP_USD.png az adott modell mappájában
                     plt.savefig(f'{order_dir}/what_if_{vizsgalt_orszag}_{scenario}_{col_name}.png', dpi=300)
                     plt.close()
-
 
 # ---------------------------------------------------------
 # FÜGGVÉNY HÍVÁSA MINDEGYIK MODELLRE
