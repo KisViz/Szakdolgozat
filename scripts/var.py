@@ -14,7 +14,7 @@ SCENARIOS = {
 }
 
 # A vizsgált változók (a VAR modell egy zárt rendszerként, egyben kezeli őket)
-indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct', 'Budget_Deficit_Pct']
+indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct']
 
 print("Adatok beolvasása (merged_data.csv)...")
 df = pd.read_csv('../data/merged_data.csv')

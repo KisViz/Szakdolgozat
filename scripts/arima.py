@@ -16,15 +16,12 @@ SCENARIOS = {
 # (p, d, q) paraméterek: Autoregresszív(p), Integrált(d), Mozgóátlag(q) komponensek
 ARIMA_ORDERS = [
     (1, 1, 1),  # Alapmodell
-    (0, 1, 1),  # Mozgóátlag hangsúlyos
-    (1, 1, 0),  # Autoregresszív hangsúlyos
-    (1, 2, 1)  # Kétszeres differenciálás (erős trendhez)
 ]
 
 print("Adatok beolvasása (merged_data.csv)...")
 df = pd.read_csv('../data/merged_data.csv')
 
-indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct', 'Budget_Deficit_Pct']
+indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct']
 countries = df['Country'].unique()
 all_forecasts = []
 
@@ -56,7 +53,7 @@ for order in ARIMA_ORDERS:
 
             # Egyváltozós modellezés indikátoronként
             for ind in indicators:
-                # Tanuló adathalmaz (Train data) szűrése a vizsgált exogén sokk (töréspont) előtti időszakra
+                # Tanuló adathalmaz szűrése a vizsgált exogén sokk (töréspont) előtti időszakra
                 train_data = country_data[country_data['Year'] < start_year][ind].dropna().values
 
                 # Adathiány kezelése: minimum 10 évnyi történelmi adat szükséges a konvergenciához

@@ -19,55 +19,13 @@ df_var = pd.read_csv('../data/var_scenarios.csv')
 
 sns.set_theme(style="whitegrid", context="paper", font_scale=1.2)
 countries_to_plot = df_actual['Country'].unique()
-indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct', 'Budget_Deficit_Pct']
+indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct']
 
 
 # ---------------------------------------------------------
 # 2. ALAP DIAGRAMOK GENERÁLÁSA (TÖRTÉNELMI ADATOK)
 # ---------------------------------------------------------
 print("Alap diagramok generálása...")
-
-# 2.1. ÁBRA: GDP trend alakulása (Logaritmikus skála)
-plt.figure(figsize=(10, 6))
-sns.lineplot(data=df_actual, x='Year', y='GDP_USD', hue='Country', linewidth=2)
-plt.title('A nominális GDP alakulása (1960 - 2025)', fontsize=14, pad=15)
-plt.ylabel('GDP (USD - Logaritmikus skála)')
-plt.xlabel('Év')
-plt.yscale('log')
-plt.xlim(1990, 2024)
-plt.tight_layout()
-plt.savefig(f'{output_dir}/gdp_trend.png', dpi=300)
-plt.close()
-
-# 2.2. ÁBRA: Inflációs ráta összehasonlítása (HUN vs. EU27)
-plt.figure(figsize=(10, 5))
-df_inf = df_actual[df_actual['Country'].isin(['HUN', 'EU27'])]
-sns.lineplot(data=df_inf, x='Year', y='Inflation_Rate', hue='Country', palette=['#d62728', '#1f77b4'], linewidth=2.5)
-plt.title('Inflációs ráta: Magyarország vs. EU27 átlag', fontsize=14, pad=15)
-plt.ylabel('Infláció (%)')
-plt.xlabel('Év')
-plt.xlim(1995, 2024)
-plt.axhline(0, color='grey', linestyle='--', linewidth=1)
-plt.tight_layout()
-plt.savefig(f'{output_dir}/inflacio_hun_vs_eu27.png', dpi=300)
-plt.close()
-
-# 2.3. ÁBRA: Államadósság és Deficit eloszlása (Scatterplot, 2022)
-vizsgalt_ev = 2022
-plt.figure(figsize=(9, 7))
-df_ev = df_actual[df_actual['Year'] == vizsgalt_ev].dropna(subset=['Public_Debt_Pct', 'Budget_Deficit_Pct'])
-sns.scatterplot(data=df_ev, x='Budget_Deficit_Pct', y='Public_Debt_Pct', hue='Country', s=150, palette='Set2')
-for i in range(df_ev.shape[0]):
-    plt.text(x=df_ev['Budget_Deficit_Pct'].iloc[i] + 0.2, y=df_ev['Public_Debt_Pct'].iloc[i] + 0.2,
-             s=df_ev['Country'].iloc[i], fontsize=10, weight='bold')
-plt.title(f'Államadósság és Költségvetési egyenleg ({vizsgalt_ev})', fontsize=14, pad=15)
-plt.xlabel('Költségvetési egyenleg (GDP %)')
-plt.ylabel('Államadósság (GDP %)')
-plt.axvline(0, color='red', linestyle='--', linewidth=1, alpha=0.5)
-plt.axhline(60, color='red', linestyle='--', linewidth=1, alpha=0.5)
-plt.tight_layout()
-plt.savefig(f'{output_dir}/adossag_vs_egyenleg_{vizsgalt_ev}.png', dpi=300)
-plt.close()
 
 # 2.4. ÁBRA: Magyar GDP zuhanás (2018-2021)
 print("Magyar GDP (2018-2021) ábra generálása...")
@@ -168,8 +126,7 @@ def generate_model_plots(df_model, model_base_name, extra_title=""):
                 mutatok = [
                     ('GDP_USD', 'GDP (USD)'),
                     ('Inflation_Rate', 'Infláció (%)'),
-                    ('Public_Debt_Pct', 'Államadósság (GDP %)'),
-                    ('Budget_Deficit_Pct', 'Költségvetési egyenleg (GDP %)')
+                    ('Public_Debt_Pct', 'Államadósság (GDP %)')
                 ]
 
                 # Minden indikátorról önálló grafikon készül

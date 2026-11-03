@@ -3,7 +3,7 @@ import pandas as pd
 # ---------------------------------------------------------
 # 1. GLOBÁLIS BEÁLLÍTÁSOK ÉS CÉLSTRUKTÚRA INICIALIZÁLÁSA
 # ---------------------------------------------------------
-countries = ['HUN', 'DEU', 'AUT', 'POL', 'ESP', 'EST', 'EU27']
+countries = ['HUN', 'DEU', 'POL']
 start_year = 1960
 end_year = 2027
 

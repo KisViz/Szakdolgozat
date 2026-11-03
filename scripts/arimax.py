@@ -15,15 +15,12 @@ SCENARIOS = {
 
 ARIMA_ORDERS = [
     (1, 1, 1),  # Alapmodell
-    (0, 1, 1),  # Mozgóátlag hangsúlyos
-    (1, 1, 0),  # Autoregresszív hangsúlyos
-    (1, 2, 1)  # Kétszeres differenciálás (erős trendhez)
 ]
 
 print("Adatok beolvasása (merged_data.csv)...")
 df = pd.read_csv('../data/merged_data.csv')
 
-indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct', 'Budget_Deficit_Pct']
+indicators = ['GDP_USD', 'Inflation_Rate', 'Public_Debt_Pct']
 exog_var = 'Oil_Price_USD'
 countries = df['Country'].unique()
 all_forecasts = []
@@ -34,6 +31,8 @@ if df[exog_var].isnull().all():
 # Exogén változó kinyerése és interpolálása (Forward/Backward fill) a hiányzó jövőbeli évekre
 all_years = list(range(1960, 2028))
 oil_series = df[['Year', exog_var]].dropna().drop_duplicates().set_index('Year').reindex(all_years)
+
+# A pandas kitölti a NaN értékeket az utolsó ismert adattal
 oil_series = oil_series[exog_var].astype(float).ffill().bfill()
 
 # ---------------------------------------------------------
